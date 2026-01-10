@@ -1,5 +1,6 @@
 [build]
-  command = "ng build --configuration=production"
+base="frontend"
+  command = "npm run build"
   publish = "dist/frontend/browser"
 
 [[redirects]]
