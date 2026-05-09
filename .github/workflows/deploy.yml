@@ -1,0 +1,56 @@
+# Nom du workflow (affiché dans GitHub Actions)
+name: CI/CD Pipeline
+
+# DÉCLENCHEURS : Quand le workflow s'exécute
+on:
+  push:                          # À chaque push Git
+    branches: [main, develop]    # Seulement sur branches main ET develop
+  pull_request:                  # ET à chaque Pull Request (toutes branches)
+
+# JOBS : Les tâches à exécuter
+jobs:
+  # JOB 1 : Tests (nom arbitraire "test")
+  test:
+    runs-on: ubuntu-latest       # S'exécute sur une machine Ubuntu
+    steps:                       # Étapes séquentielles
+    
+    # ÉTAPE 1 : Récupère le code
+    - uses: actions/checkout@v4  # Clone ton repo GitHub
+    
+    # ÉTAPE 2 : Installe Node.js
+    - name: Setup Node           # Nom affiché dans logs
+      uses: actions/setup-node@v4  # Action officielle GitHub
+      with:                        # Paramètres
+        node-version: '20'         # Installe Node.js version 20
+    
+    # ÉTAPE 3 : Installe dépendances
+    - name: Install dependencies (Frontend)
+      run: |                      # Commande shell multi-lignes
+        cd frontend               # Va dans dossier frontend
+        npm ci                    # Installe exactement package-lock.json
+    
+    # ÉTAPE 4 : Exécute tests
+    - name: Run tests (Frontend)
+      run: |
+        cd frontend               # Reste dans frontend
+        npm test                  # Exécute les tests définis dans package.json
+
+  # JOB 2 : Déploiement
+  deploy:
+    needs: test                   # ATTEND que le job "test" termine
+    if: github.ref == 'refs/heads/main'  # SEULEMENT si branche main
+    runs-on: ubuntu-latest        # Machine Ubuntu
+    
+    steps:
+      # ÉTAPE 1 : Clone repo (encore)
+      - uses: actions/checkout@v4
+      
+      # ÉTAPE 2 : Déploie sur Netlify
+      - name: Build and Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3  # Action Netlify officielle
+        env:                              # Variables d'environnement
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        with:                             # Paramètres de l'action
+          publish-dir: './frontend/dist/frontend/browser'  # Dossier à déployer
+          deploy-message: "Deploy from GitHub Actions"     # Message dans Netlify
